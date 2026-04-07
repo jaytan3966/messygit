@@ -1,12 +1,14 @@
 import click
 from config import save_api_key, load_api_key
+from git import get_staged_diff, get_staged_files
 
 @click.group(invoke_without_command=True)
 @click.pass_context
 def main(ctx):
     """Messy Git is a tool that analyzes your updated code and generates clean commit messages. Let's keep your "messy" messages in check!"""
     if ctx.invoked_subcommand is None:
-        click.echo("HELLO WORLD")
+        click.echo(f"Staged diff: {get_staged_diff()}")
+        click.echo(f"Staged files: {get_staged_files()}")
 
 @main.command('config')
 @click.option('--key', type=str, help='Anthropic API key')
