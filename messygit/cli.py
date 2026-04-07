@@ -52,7 +52,7 @@ def _prompt_commit_action(message: str) -> None:
             current = stripped
             continue
 
-        click.echo("Please answer Y (yes), n (no), or e (edit).")
+        click.echo("Please answer y (yes), n (no), or e (edit).")
 
 @click.group(invoke_without_command=True)
 @click.pass_context
