@@ -10,6 +10,8 @@ Types (pick one): feat, fix, docs, style, refactor, test, chore
 
 Base the message only on the staged diff the user provides."""
 
+## TODO: optimize the prompt to be more specific to the user's changes
+## TODO: summarize large refactors into smaller commits with more descriptive messages (15000 tokens threshold)
 
 def build_user_prompt(staged_diff: str) -> str:
     return (
