@@ -5,6 +5,7 @@ import click
 from .config import (
     ANTHROPIC_ENV_VAR,
     CONFIG_FILE,
+    AnthropicInsufficientBalanceError,
     InvalidAnthropicCredentialsError,
     MissingApiKeyError,
     load_api_key,
@@ -68,6 +69,8 @@ def main(ctx):
         except MissingApiKeyError as e:
             raise click.ClickException(str(e)) from e
         except InvalidAnthropicCredentialsError as e:
+            raise click.ClickException(str(e)) from e
+        except AnthropicInsufficientBalanceError as e:
             raise click.ClickException(str(e)) from e
         _prompt_commit_action(message)
 
