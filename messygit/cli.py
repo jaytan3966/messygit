@@ -5,6 +5,7 @@ import click
 from .config import (
     ANTHROPIC_ENV_VAR,
     CONFIG_FILE,
+    InvalidAnthropicCredentialsError,
     MissingApiKeyError,
     load_api_key,
     mask_api_key,
@@ -65,6 +66,8 @@ def main(ctx):
         try:
             message = generate_commit_message(diff)
         except MissingApiKeyError as e:
+            raise click.ClickException(str(e)) from e
+        except InvalidAnthropicCredentialsError as e:
             raise click.ClickException(str(e)) from e
         _prompt_commit_action(message)
 

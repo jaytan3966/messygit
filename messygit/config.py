@@ -16,6 +16,25 @@ class MissingApiKeyError(RuntimeError):
     """Raised when no API key is available from the environment or config file."""
 
 
+INVALID_API_KEY_MESSAGE = (
+    "Anthropic rejected this API key (invalid, expired, or revoked). "
+    "Check that ANTHROPIC_API_KEY is correct, or update the key saved with "
+    "`messygit config --key <key>`. Create or rotate keys at "
+    "https://console.anthropic.com/settings/keys"
+)
+
+
+FORBIDDEN_API_KEY_MESSAGE = (
+    "Anthropic denied access with this API key (forbidden). "
+    "The key may be disabled, lack required permissions, or your account may be restricted. "
+    "Review your key and billing at https://console.anthropic.com/"
+)
+
+
+class InvalidAnthropicCredentialsError(RuntimeError):
+    """Raised when Anthropic returns 401 or 403 for the configured API key."""
+
+
 def save_api_key(key: str):
     CONFIG_DIR.mkdir(exist_ok=True)
     config = {"api_key": key}
