@@ -21,7 +21,7 @@ def _prompt_commit_action(message: str) -> None:
     while True:
         click.echo(current)
         choice = click.prompt(
-            "Commit with this message? [Y/n/e]",
+            "Commit with this message? [y/n/e]",
             default="Y",
             show_default=False,
         ).strip().lower()
