@@ -4,8 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "messygit"
-version = "0.1.0"
-description = "Analyzes your staged changes and generates clean Conventional Commits messages."
+version = "0.1.1"
+description = "CLI that drafts Conventional Commits from staged git diffs with Claude, then commit, cancel, or edit."
+readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
