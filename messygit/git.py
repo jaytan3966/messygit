@@ -9,7 +9,7 @@ def get_staged_diff():
         text=True
     )
     return result.stdout
-##I LOVE PENIS
+
 def get_staged_files():
     result = subprocess.run(
         ["git", "diff", "--staged", "--name-only"],
