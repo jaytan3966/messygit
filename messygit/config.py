@@ -11,6 +11,15 @@ MISSING_API_KEY_MESSAGE = (
     f"or save a key with: messygit config --key <key> (stored in {CONFIG_FILE})."
 )
 
+EMPTY_ENV_API_KEY_MESSAGE = (
+    f"{ANTHROPIC_ENV_VAR} is set but empty or whitespace-only, so it cannot be used. "
+    "Unset the variable, set it to a real key, or save one with: messygit config --key <key>"
+)
+
+EMPTY_CONFIG_API_KEY_MESSAGE = (
+    "API key cannot be empty or whitespace-only. Pass a real Anthropic key with --key."
+)
+
 class MissingApiKeyError(RuntimeError):
     """Raised when no API key is available from the environment or config file."""
 INVALID_API_KEY_MESSAGE = (
@@ -47,27 +56,41 @@ ANTHROPIC_INSUFFICIENT_BALANCE_MESSAGE = (
 class AnthropicInsufficientBalanceError(RuntimeError):
     """Raised when Anthropic returns billing_error, 402, or low-credit style 400 responses."""
 
-def save_api_key(key: str):
+def save_api_key(key: str) -> None:
+    stripped = (key or "").strip()
+    if not stripped:
+        raise ValueError(EMPTY_CONFIG_API_KEY_MESSAGE)
     CONFIG_DIR.mkdir(exist_ok=True)
-    config = {"api_key": key}
+    config = {"api_key": stripped}
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f)
 
-def load_api_key():
+
+def load_api_key() -> str | None:
     if not CONFIG_FILE.exists():
         return None
     with open(CONFIG_FILE) as f:
         config = json.load(f)
-    return config.get("api_key")
+    raw = config.get("api_key")
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    return s or None
+
 
 def resolve_api_key() -> str:
     """Return API key from ANTHROPIC_API_KEY or ~/.messygit/config.json."""
+    env_set = ANTHROPIC_ENV_VAR in os.environ
     env_key = (os.environ.get(ANTHROPIC_ENV_VAR) or "").strip()
     if env_key:
         return env_key
+
     file_key = load_api_key()
-    if file_key and str(file_key).strip():
-        return str(file_key).strip()
+    if file_key:
+        return file_key
+
+    if env_set:
+        raise MissingApiKeyError(EMPTY_ENV_API_KEY_MESSAGE)
     raise MissingApiKeyError(MISSING_API_KEY_MESSAGE)
 
 def mask_api_key(key: str | None) -> str:

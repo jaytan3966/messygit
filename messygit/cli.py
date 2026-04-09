@@ -78,19 +78,33 @@ def main(ctx):
 @click.option("--key", type=str, required=True, help="Anthropic API key")
 def config_cmd(key):
     """Configure your Anthropic API key."""
-    save_api_key(key)
-    click.echo(f"API key saved successfully ({mask_api_key(key)})")
+    try:
+        save_api_key(key)
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+    click.echo(f"API key saved successfully ({mask_api_key(key.strip())})")
 
 @main.command("show")
 def show():
     """Display masked API key (env takes precedence over config file)."""
+    env_set = ANTHROPIC_ENV_VAR in os.environ
     env_key = (os.environ.get(ANTHROPIC_ENV_VAR) or "").strip()
     if env_key:
         click.echo(f"API key: {mask_api_key(env_key)} (from ANTHROPIC_API_KEY)")
         return
     file_key = load_api_key()
-    if file_key and str(file_key).strip():
+    if file_key:
+        if env_set:
+            click.echo(
+                f"{ANTHROPIC_ENV_VAR} is set but empty; showing key from {CONFIG_FILE}."
+            )
         click.echo(f"API key: {mask_api_key(file_key)} (from {CONFIG_FILE})")
+        return
+    if env_set:
+        click.echo(
+            f"{ANTHROPIC_ENV_VAR} is set but empty or whitespace-only, and no usable key "
+            f"is stored in {CONFIG_FILE}. Unset the variable or run messygit config --key."
+        )
         return
     click.echo("No API key found. Set ANTHROPIC_API_KEY or run messygit config --key.")
 
