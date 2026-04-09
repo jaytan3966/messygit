@@ -9,6 +9,9 @@ a single Conventional Commits subject line from a staged diff.
 - If your output ever contains more than one line, you have failed your task.
 
 # Conventional Commits format
+Format: type(scope): description
+Example: feat(ui): add table
+
 Types (pick one): feat, fix, docs, style, refactor, test, chore
 - scope: short noun for the area changed (omit if no sensible scope exists)
 - description: imperative mood, lowercase, no trailing period
