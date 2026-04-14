@@ -81,8 +81,8 @@ def _text_from_message(message) -> str:
     return "\n".join(parts).strip()
 
 
-def generate_commit_message(staged_diff: str) -> str:
-    """Call Claude with the staged diff and return a one-line commit message."""
+def generate_commit_message(staged_changes: str) -> str:
+    """Call Claude with the compact staged changes and return a one-line commit message."""
     client = Anthropic(api_key=resolve_api_key())
     try:
         response = client.messages.create(
@@ -90,7 +90,7 @@ def generate_commit_message(staged_diff: str) -> str:
             max_tokens=DEFAULT_MAX_TOKENS,
             system=COMMIT_SYSTEM_PROMPT,
             messages=[
-                {"role": "user", "content": build_user_prompt(staged_diff)},
+                {"role": "user", "content": build_user_prompt(staged_changes)},
             ],
         )
     except AuthenticationError as e:
