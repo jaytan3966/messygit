@@ -16,7 +16,7 @@ from .config import (
     mask_api_key,
     save_api_key,
 )
-from .git import get_staged_diff, git_add, git_commit
+from .git import get_staged_diff, git_add, git_commit, git_push
 from .llm import generate_commit_message
 from .prompts import SUGGESTION_SYSTEM_PROMPT
 from .agent.tools import run_git_tool, read_file_tool, list_directory_tool, search_code_tool
@@ -36,9 +36,10 @@ HELP_TEXT = """
 commands:
   add          stage files (usage: add . or add <file> ...)
   commit       generate a commit message from staged changes
+  push         push commits to remote
   config       set your Anthropic API key (usage: config <key>)
   show         display your masked API key
-  suggestion   suggest next steps for your project
+  suggest   suggest next steps for your project
   help         show this help message
   quit/exit    exit messygit
 """.strip()
@@ -140,6 +141,18 @@ def _handle_add(args: list[str]) -> None:
     click.echo(f"Staged {label}")
 
 
+def _handle_push() -> None:
+    result = git_push()
+    if result.returncode != 0:
+        _print_error(result.stderr.strip() if result.stderr else "git push failed.")
+        return
+    output = (result.stdout or result.stderr or "").strip()
+    if output:
+        click.echo(output)
+    else:
+        click.echo("Pushed successfully.")
+
+
 def _handle_commit() -> None:
     diff = get_staged_diff()
     if not diff.strip():
@@ -209,9 +222,10 @@ def _handle_suggestion() -> None:
 COMMANDS = {
     "add": _handle_add,
     "commit": lambda args: _handle_commit(),
+    "push": lambda args: _handle_push(),
     "config": _handle_config,
     "show": lambda args: _handle_show(),
-    "suggestion": lambda args: _handle_suggestion(),
+    "suggest": lambda args: _handle_suggestion(),
     "help": lambda args: click.echo(HELP_TEXT),
 }
 

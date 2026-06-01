@@ -240,6 +240,14 @@ def git_add(paths: list[str]) -> CompletedProcess[str]:
     )
 
 
+def git_push() -> CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "push"],
+        capture_output=True,
+        text=True,
+    )
+
+
 def git_commit(message: str) -> CompletedProcess[str]:
     return subprocess.run(
         ["git", "commit", "-m", message],
