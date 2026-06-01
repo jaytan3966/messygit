@@ -39,7 +39,7 @@ commands:
   push         push commits to remote
   config       set your Anthropic API key (usage: config <key>)
   show         display your masked API key
-  suggest   suggest next steps for your project
+  suggest      suggest next steps for your project
   help         show this help message
   quit/exit    exit messygit
 """.strip()
@@ -207,8 +207,8 @@ def _handle_suggestion() -> None:
     agent = Agent(
         name="suggestion_agent",
         system_prompt=SUGGESTION_SYSTEM_PROMPT,
-        max_iterations=15,
-        tools=[run_git_tool, read_file_tool, list_directory_tool, search_code_tool],
+        max_iterations=8,
+        tools=[run_git_tool, read_file_tool, list_directory_tool],
     )
     try:
         with Spinner():
