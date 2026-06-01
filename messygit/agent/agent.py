@@ -8,33 +8,30 @@ from anthropic import (
 )
 
 from .config import (
-    ANTHROPIC_INSUFFICIENT_BALANCE_MESSAGE,
     FORBIDDEN_API_KEY_MESSAGE,
     INVALID_API_KEY_MESSAGE,
     AnthropicInsufficientBalanceError,
     InvalidAnthropicCredentialsError,
     resolve_api_key,
 )
-from .prompts import COMMIT_SYSTEM_PROMPT, build_user_prompt
 from .llm import _is_insufficient_balance_or_billing, _insufficient_balance_user_message, _text_from_message
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
-DEFAULT_MAX_TOKENS = 256
+DEFAULT_MAX_TOKENS = 4096
 
 class Agent:
-    def __init__(self, name: str, system_prompt: str, user_prompt: str, max_iterations: int, tools: list[Tool]):
+    def __init__(self, name: str, system_prompt: str, max_iterations: int, tools: list[Tool]):
         self.name = name
         self.system_prompt = system_prompt
-        self.user_prompt = user_prompt
         self.max_iterations = max_iterations
         self.tools = tools
-        self.messages = []
 
-    def run(self, input: str) -> str:
+    def run(self, user_input: str) -> str:
         """Run the agent."""
         client = Anthropic(api_key=resolve_api_key())
+        messages = []
         try:
-            self.messages.append({"role": "user", "content": input})
+            messages.append({"role": "user", "content": user_input})
             response = None
             for i in range(self.max_iterations):
                 response = client.messages.create(
@@ -43,9 +40,9 @@ class Agent:
                     tools=[t.to_schema() for t in self.tools],
                     tool_choice="auto",
                     system=self.system_prompt,
-                    messages=self.messages,
+                    messages=messages,
                 )
-                self.messages.append({"role": "assistant", "content": response.content})
+                messages.append({"role": "assistant", "content": response.content})
 
                 tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
                 if not tool_use_blocks:
@@ -60,7 +57,7 @@ class Agent:
                         "tool_use_id": block.id,
                         "content": str(result),
                     })
-                self.messages.append({"role": "user", "content": tool_results})
+                messages.append({"role": "user", "content": tool_results})
         except AuthenticationError as e:
             raise InvalidAnthropicCredentialsError(INVALID_API_KEY_MESSAGE) from e
         except PermissionDeniedError as e:
@@ -77,4 +74,6 @@ class Agent:
                     _insufficient_balance_user_message(e)
                 ) from e
             raise
+        if not response:
+            return "No response from the agent."
         return _text_from_message(response)
