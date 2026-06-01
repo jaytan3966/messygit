@@ -232,6 +232,14 @@ def get_staged_files() -> list[str]:
     return [f for f in files.split("\n") if not _is_noise_file(f)]
 
 
+def git_add(paths: list[str]) -> CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "add", *paths],
+        capture_output=True,
+        text=True,
+    )
+
+
 def git_commit(message: str) -> CompletedProcess[str]:
     return subprocess.run(
         ["git", "commit", "-m", message],

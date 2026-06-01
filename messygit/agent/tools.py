@@ -1,8 +1,9 @@
+import os
 from .tool import Tool
-from .git import get_staged_diff, get_staged_files
+from ..git import get_staged_diff, get_staged_files
 import subprocess
 
-ALLOWED_GIT_COMMANDS = set[str]("log", "diff", "status", "show", "status", "shortlog", "blame")
+ALLOWED_GIT_COMMANDS = ["log", "diff", "status", "show", "status", "shortlog", "blame"]
 
 def run_git(args: list[str]) -> str:
     if not args or args[0] not in ALLOWED_GIT_COMMANDS:

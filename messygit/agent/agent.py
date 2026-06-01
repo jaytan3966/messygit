@@ -7,14 +7,14 @@ from anthropic import (
     PermissionDeniedError,
 )
 
-from .config import (
+from ..config import (
     FORBIDDEN_API_KEY_MESSAGE,
     INVALID_API_KEY_MESSAGE,
     AnthropicInsufficientBalanceError,
     InvalidAnthropicCredentialsError,
     resolve_api_key,
 )
-from .llm import _is_insufficient_balance_or_billing, _insufficient_balance_user_message, _text_from_message
+from ..llm import _is_insufficient_balance_or_billing, _insufficient_balance_user_message, _text_from_message
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_TOKENS = 4096
@@ -38,7 +38,7 @@ class Agent:
                     model=DEFAULT_MODEL,
                     max_tokens=DEFAULT_MAX_TOKENS,
                     tools=[t.to_schema() for t in self.tools],
-                    tool_choice="auto",
+                    tool_choice={"type": "auto"},
                     system=self.system_prompt,
                     messages=messages,
                 )
