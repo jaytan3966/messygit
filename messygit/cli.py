@@ -21,10 +21,12 @@ from .config import (
     MissingApiKeyError,
     load_api_key,
     load_theme,
+    load_todo,
     mask_api_key,
     save_api_key,
     save_model,
     save_theme,
+    save_todo,
 )
 from .git import (
     get_current_branch,
@@ -121,6 +123,7 @@ HELP_GROUPS = [
         ("tokens", "show session token usage / open billing", "tokens"),
     ]),
     ("app", [
+        ("todo", "open your todo list in your editor", "todo"),
         ("theme", "change the UI color", "theme or theme <name>"),
         ("help", "show this help message", "help"),
         ("quit/exit", "exit messygit", "quit"),
@@ -611,6 +614,25 @@ def _handle_theme(args: list[str]) -> None:
     console.print(Text.assemble("Theme set to ", (name, BRAND), "  ") + _swatch(THEMES[name]))
 
 
+TODO_SEED = "# messygit todo\n\n- \n"
+
+
+def _handle_todo() -> None:
+    """Open the persisted todo file in $EDITOR; save whatever comes back."""
+    current = load_todo()
+    seed = current if current.strip() else TODO_SEED
+    edited = click.edit(seed)
+    if edited is None:
+        _warn("Editor exited without saving; todo unchanged.")
+        return
+    save_todo(edited)
+    open_items = sum(
+        1 for line in edited.splitlines() if line.lstrip().startswith(("- ", "* "))
+        and line.strip() not in ("-", "*")
+    )
+    _success(f"Todo saved [{MUTED}]({open_items} item{'s' if open_items != 1 else ''})[/]")
+
+
 def _handle_suggestion() -> None:
     agent = Agent(
         name="suggestion_agent",
@@ -640,6 +662,7 @@ COMMANDS = {
     "suggest": lambda args: _handle_suggestion(),
     "tokens": lambda args: _handle_tokens(),
     "model": _handle_model,
+    "todo": lambda args: _handle_todo(),
     "theme": _handle_theme,
     "help": lambda args: _print_help(),
 }

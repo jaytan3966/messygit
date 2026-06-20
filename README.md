@@ -103,6 +103,7 @@ Commands are grouped on the `help` screen:
 
 | Command | Description |
 |---------|-------------|
+| `todo` | Open your todo list in `$EDITOR` (saved to `~/.messygit/todo.md`) |
 | `theme` or `theme <name>` | Change the UI color (run `theme` to list presets) |
 | `help` | List available commands |
 | `quit` / `exit` | Exit messygit |

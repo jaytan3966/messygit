@@ -4,6 +4,7 @@ from pathlib import Path
 
 CONFIG_DIR = Path.home() / ".messygit"
 CONFIG_FILE = CONFIG_DIR / "config.json"
+TODO_FILE = CONFIG_DIR / "todo.md"
 ANTHROPIC_ENV_VAR = "ANTHROPIC_API_KEY"
 
 MISSING_API_KEY_MESSAGE = (
@@ -115,6 +116,22 @@ def save_model(name: str) -> None:
     config = _read_config()
     config["model"] = name
     _write_config(config)
+
+
+def load_todo() -> str:
+    if not TODO_FILE.exists():
+        return ""
+    try:
+        with open(TODO_FILE) as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def save_todo(text: str) -> None:
+    CONFIG_DIR.mkdir(exist_ok=True)
+    with open(TODO_FILE, "w") as f:
+        f.write(text)
 
 
 def resolve_api_key() -> str:
