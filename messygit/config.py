@@ -103,6 +103,20 @@ def save_theme(name: str) -> None:
     _write_config(config)
 
 
+def load_model() -> str | None:
+    raw = _read_config().get("model")
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    return s or None
+
+
+def save_model(name: str) -> None:
+    config = _read_config()
+    config["model"] = name
+    _write_config(config)
+
+
 def resolve_api_key() -> str:
     """Return API key from ANTHROPIC_API_KEY or ~/.messygit/config.json."""
     env_set = ANTHROPIC_ENV_VAR in os.environ

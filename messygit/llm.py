@@ -14,10 +14,10 @@ from .config import (
     InvalidAnthropicCredentialsError,
     resolve_api_key,
 )
+from .models import current_model
 from .prompts import COMMIT_SYSTEM_PROMPT, build_user_prompt
 from .usage import SESSION_USAGE
 
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_TOKENS = 256
 
 _BALANCE_ERROR_HINTS = (
@@ -85,9 +85,10 @@ def _text_from_message(message) -> str:
 def generate_commit_message(staged_changes: str) -> str:
     """Call Claude with the compact staged changes and return a one-line commit message."""
     client = Anthropic(api_key=resolve_api_key())
+    model = current_model()
     try:
         response = client.messages.create(
-            model=DEFAULT_MODEL,
+            model=model.id,
             max_tokens=DEFAULT_MAX_TOKENS,
             system=COMMIT_SYSTEM_PROMPT,
             messages=[
@@ -110,5 +111,5 @@ def generate_commit_message(staged_changes: str) -> str:
                 _insufficient_balance_user_message(e)
             ) from e
         raise
-    SESSION_USAGE.record(response.usage)
+    SESSION_USAGE.record(response.usage, model)
     return _text_from_message(response)

@@ -15,9 +15,9 @@ from ..config import (
     resolve_api_key,
 )
 from ..llm import _is_insufficient_balance_or_billing, _insufficient_balance_user_message, _text_from_message
+from ..models import current_model
 from ..usage import SESSION_USAGE
 
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_TOKENS = 4096
 
 class Agent:
@@ -30,20 +30,21 @@ class Agent:
     def run(self, user_input: str) -> str:
         """Run the agent."""
         client = Anthropic(api_key=resolve_api_key())
+        model = current_model()
         messages = []
         try:
             messages.append({"role": "user", "content": user_input})
             response = None
             for i in range(self.max_iterations):
                 response = client.messages.create(
-                    model=DEFAULT_MODEL,
+                    model=model.id,
                     max_tokens=DEFAULT_MAX_TOKENS,
                     tools=[t.to_schema() for t in self.tools],
                     tool_choice={"type": "auto"},
                     system=self.system_prompt,
                     messages=messages,
                 )
-                SESSION_USAGE.record(response.usage)
+                SESSION_USAGE.record(response.usage, model)
                 messages.append({"role": "assistant", "content": response.content})
 
                 tool_use_blocks = [b for b in response.content if b.type == "tool_use"]

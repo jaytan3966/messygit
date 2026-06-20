@@ -15,20 +15,35 @@ class _SessionUsage:
     input: int = 0
     output: int = 0
     requests: int = 0
+    cost: float = 0.0  # accumulated USD estimate, priced per call at the model used
 
     @property
     def total(self) -> int:
         return self.input + self.output
 
-    def record(self, usage) -> None:
-        """Add one API response's usage (input + cache + output tokens)."""
+    @property
+    def estimated_cost(self) -> float:
+        return self.cost
+
+    def record(self, usage, model=None) -> None:
+        """Add one API response's usage (input + cache + output tokens).
+
+        If `model` (a models.ModelInfo) is given, accumulate its cost at that
+        model's rates, so the estimate stays accurate across model switches.
+        """
         if usage is None:
             return
-        self.input += getattr(usage, "input_tokens", 0) or 0
-        self.input += getattr(usage, "cache_creation_input_tokens", 0) or 0
-        self.input += getattr(usage, "cache_read_input_tokens", 0) or 0
-        self.output += getattr(usage, "output_tokens", 0) or 0
+        inp = (
+            (getattr(usage, "input_tokens", 0) or 0)
+            + (getattr(usage, "cache_creation_input_tokens", 0) or 0)
+            + (getattr(usage, "cache_read_input_tokens", 0) or 0)
+        )
+        out = getattr(usage, "output_tokens", 0) or 0
+        self.input += inp
+        self.output += out
         self.requests += 1
+        if model is not None:
+            self.cost += inp * model.input_cost_per_token + out * model.output_cost_per_token
 
 
 # Single process-wide tracker.

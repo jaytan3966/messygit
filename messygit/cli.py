@@ -23,6 +23,7 @@ from .config import (
     load_theme,
     mask_api_key,
     save_api_key,
+    save_model,
     save_theme,
 )
 from .git import (
@@ -36,6 +37,7 @@ from .git import (
 )
 from .llm import generate_commit_message
 from .prompts import SUGGESTION_SYSTEM_PROMPT
+from .models import MODELS, current_model, resolve_model_key
 from .usage import SESSION_USAGE, BILLING_URL
 from .agent.tools import run_git_tool, read_file_tool, list_directory_tool
 from .agent.agent import Agent
@@ -115,6 +117,7 @@ HELP_GROUPS = [
     ("account", [
         ("config", "set your Anthropic API key", "config <key>"),
         ("show", "display your masked API key", "show"),
+        ("model", "change the AI model / see pricing", "model or model <name>"),
         ("tokens", "show session token usage / open billing", "tokens"),
     ]),
     ("app", [
@@ -209,15 +212,15 @@ def _spinner(phrase: str | None = None) -> _CharSpinner:
 
 
 def _print_error(msg: str) -> None:
-    err_console.print(f"[{ERROR}]error:[/] {msg}")
+    err_console.print(f"[{ERROR}]error:[/] {msg}", highlight=False)
 
 
 def _success(msg: str) -> None:
-    console.print(f"[{SUCCESS}]✓[/] {msg}")
+    console.print(f"[{SUCCESS}]✓[/] {msg}", highlight=False)
 
 
 def _warn(msg: str) -> None:
-    console.print(f"[{WARNING}]![/] {msg}")
+    console.print(f"[{WARNING}]![/] {msg}", highlight=False)
 
 
 def _field(label: str, value: Text | str) -> Text:
@@ -315,6 +318,10 @@ def _print_startup() -> None:
         console.print(_field("repo", Text("not a git repository", style=WARNING)))
 
     console.print(_field("api key", _api_key_status()))
+    _m = current_model()
+    console.print(
+        _field("model", Text.assemble((_m.label, BRAND), (f"  {_model_pricing(_m)}", MUTED)))
+    )
     console.print(_field("tokens", _usage_summary()))
     console.print(f"  {'─' * 60}", style=MUTED)
     console.print(
@@ -451,6 +458,13 @@ def _handle_show() -> None:
     _warn("No API key found. Set ANTHROPIC_API_KEY or run: config <key>")
 
 
+def _fmt_cost(amount: float) -> str:
+    """Format a USD estimate: cents-precision normally, finer when tiny."""
+    if amount > 0 and amount < 0.01:
+        return f"${amount:.4f}"
+    return f"${amount:.2f}"
+
+
 def _usage_summary() -> Text:
     """One-line session usage for the startup dashboard."""
     u = SESSION_USAGE
@@ -458,7 +472,8 @@ def _usage_summary() -> Text:
         return Text("0 used this session", style=MUTED)
     return Text.assemble(
         (f"{u.total:,}", SUCCESS),
-        (" used this session", MUTED),
+        (" used this session  ", MUTED),
+        (f"≈ {_fmt_cost(u.estimated_cost)}", MUTED),
     )
 
 
@@ -478,10 +493,63 @@ def _print_usage_delta(before_total: int) -> None:
     if delta <= 0:
         return
     console.print(
-        f"[{MUTED}]+{delta:,} tokens · {SESSION_USAGE.total:,} this session[/]",
+        f"[{MUTED}]+{delta:,} tokens · {SESSION_USAGE.total:,} this session "
+        f"· ≈ {_fmt_cost(SESSION_USAGE.estimated_cost)}[/]",
         highlight=False,
     )
     _maybe_warn_high_usage()
+
+
+def _model_pricing(m) -> str:
+    return f"${m.input_per_mtok:g} in · ${m.output_per_mtok:g} out / 1M"
+
+
+def _print_model_list() -> None:
+    current = resolve_model_key()
+    console.print(
+        f"[{MUTED}]Available models — usage:[/] [bold]model <name>[/]", highlight=False
+    )
+    for key, m in MODELS.items():
+        is_current = key == current
+        line = Text()
+        line.append("  ● " if is_current else "    ", style=BRAND if is_current else MUTED)
+        line.append(f"{key:<7}", style=("bold " + BRAND) if is_current else "default")
+        line.append(m.label, style=BRAND if is_current else "default")
+        line.append("  ")
+        line.append(_model_pricing(m), style=MUTED)
+        if is_current:
+            line.append("  (current)", style=MUTED)
+        console.print(line)
+
+
+def _handle_model(args: list[str]) -> None:
+    if not args:
+        _print_model_list()
+        return
+    key = args[0].lower()
+    if key not in MODELS:
+        _print_error(f"Unknown model '{key}'. Run 'model' to see the options.")
+        return
+    target = MODELS[key]
+    current = current_model()
+    if key == resolve_model_key():
+        _warn(f"Already using {target.label}.")
+        return
+    if target.input_per_mtok > current.input_per_mtok:
+        _warn(
+            f"{target.label} costs more than {current.label} "
+            f"({_model_pricing(target)} vs {_model_pricing(current)}). "
+            "Token usage will be billed at the higher rate."
+        )
+        if not click.confirm(_brand_ansi("Switch anyway?", bold=False), default=False):
+            _warn("Model unchanged.")
+            return
+    save_model(key)
+    console.print(
+        Text.assemble(
+            "Model set to ", (target.label, BRAND), (f"  {_model_pricing(target)}", MUTED)
+        )
+    )
 
 
 def _handle_tokens() -> None:
@@ -492,9 +560,13 @@ def _handle_tokens() -> None:
     body.append("         ", style=MUTED)
     body.append(f"{u.input:,} in · {u.output:,} out\n", style=MUTED)
     body.append("requests ", style=MUTED)
-    body.append(f"{u.requests}\n\n", style="default")
-    body.append("Note: the API can't report remaining credits — this is\n", style=MUTED)
-    body.append("usage measured this session only.", style=MUTED)
+    body.append(f"{u.requests}\n", style="default")
+    body.append("est cost ", style=MUTED)
+    body.append(f"≈ {_fmt_cost(u.estimated_cost)}\n\n", style=SUCCESS if u.total else MUTED)
+    body.append(
+        f"Note: cost is a rough estimate at {current_model().label} rates; the\n", style=MUTED
+    )
+    body.append("API can't report credits — usage is this session only.", style=MUTED)
     console.print(
         Panel(body, title="token usage", border_style=BRAND, title_align="left")
     )
@@ -567,6 +639,7 @@ COMMANDS = {
     "show": lambda args: _handle_show(),
     "suggest": lambda args: _handle_suggestion(),
     "tokens": lambda args: _handle_tokens(),
+    "model": _handle_model,
     "theme": _handle_theme,
     "help": lambda args: _print_help(),
 }
