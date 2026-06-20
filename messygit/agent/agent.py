@@ -15,6 +15,7 @@ from ..config import (
     resolve_api_key,
 )
 from ..llm import _is_insufficient_balance_or_billing, _insufficient_balance_user_message, _text_from_message
+from ..usage import SESSION_USAGE
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_TOKENS = 4096
@@ -42,6 +43,7 @@ class Agent:
                     system=self.system_prompt,
                     messages=messages,
                 )
+                SESSION_USAGE.record(response.usage)
                 messages.append({"role": "assistant", "content": response.content})
 
                 tool_use_blocks = [b for b in response.content if b.type == "tool_use"]

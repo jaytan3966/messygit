@@ -56,26 +56,51 @@ ANTHROPIC_INSUFFICIENT_BALANCE_MESSAGE = (
 class AnthropicInsufficientBalanceError(RuntimeError):
     """Raised when Anthropic returns billing_error, 402, or low-credit style 400 responses."""
 
-def save_api_key(key: str) -> None:
-    stripped = (key or "").strip()
-    if not stripped:
-        raise ValueError(EMPTY_CONFIG_API_KEY_MESSAGE)
+def _read_config() -> dict:
+    if not CONFIG_FILE.exists():
+        return {}
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f) or {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _write_config(config: dict) -> None:
     CONFIG_DIR.mkdir(exist_ok=True)
-    config = {"api_key": stripped}
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f)
 
 
+def save_api_key(key: str) -> None:
+    stripped = (key or "").strip()
+    if not stripped:
+        raise ValueError(EMPTY_CONFIG_API_KEY_MESSAGE)
+    config = _read_config()
+    config["api_key"] = stripped
+    _write_config(config)
+
+
 def load_api_key() -> str | None:
-    if not CONFIG_FILE.exists():
-        return None
-    with open(CONFIG_FILE) as f:
-        config = json.load(f)
-    raw = config.get("api_key")
+    raw = _read_config().get("api_key")
     if raw is None:
         return None
     s = str(raw).strip()
     return s or None
+
+
+def load_theme() -> str | None:
+    raw = _read_config().get("theme")
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    return s or None
+
+
+def save_theme(name: str) -> None:
+    config = _read_config()
+    config["theme"] = name
+    _write_config(config)
 
 
 def resolve_api_key() -> str:

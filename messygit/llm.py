@@ -15,6 +15,7 @@ from .config import (
     resolve_api_key,
 )
 from .prompts import COMMIT_SYSTEM_PROMPT, build_user_prompt
+from .usage import SESSION_USAGE
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_TOKENS = 256
@@ -109,4 +110,5 @@ def generate_commit_message(staged_changes: str) -> str:
                 _insufficient_balance_user_message(e)
             ) from e
         raise
+    SESSION_USAGE.record(response.usage)
     return _text_from_message(response)

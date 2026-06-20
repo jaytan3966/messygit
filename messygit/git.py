@@ -232,6 +232,66 @@ def get_staged_files() -> list[str]:
     return [f for f in files.split("\n") if not _is_noise_file(f)]
 
 
+def is_git_repo() -> bool:
+    """Return True if the current working directory is inside a git work tree."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-inside-work-tree"],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def get_current_branch() -> str | None:
+    """Return the current branch name, or None if detached/unavailable."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    branch = result.stdout.strip()
+    if not branch or branch == "HEAD":
+        return None
+    return branch
+
+
+@dataclass
+class RepoStatus:
+    branch: str | None
+    staged: int
+    modified: int
+    untracked: int
+
+
+def get_repo_status() -> RepoStatus:
+    """Return a compact summary of the working tree using git status --porcelain."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+    )
+    staged = modified = untracked = 0
+    for line in result.stdout.splitlines():
+        if not line:
+            continue
+        index, worktree = line[0], line[1]
+        if index == "?" and worktree == "?":
+            untracked += 1
+            continue
+        if index not in (" ", "?"):
+            staged += 1
+        if worktree not in (" ", "?"):
+            modified += 1
+    return RepoStatus(
+        branch=get_current_branch(),
+        staged=staged,
+        modified=modified,
+        untracked=untracked,
+    )
+
+
 def git_add(paths: list[str]) -> CompletedProcess[str]:
     return subprocess.run(
         ["git", "add", *paths],
