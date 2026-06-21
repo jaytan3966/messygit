@@ -17,3 +17,6 @@ dependencies = [
 
 [project.scripts]
 messygit = "messygit.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
