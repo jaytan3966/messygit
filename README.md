@@ -83,6 +83,7 @@ Commands are grouped on the `help` screen:
 | `add <file>` or `add .` | Stage files for commit |
 | `commit` | Generate an AI commit message from staged changes, then commit / cancel / edit |
 | `push` | Push commits to remote |
+| `outbox` | Show commits made locally but not yet pushed to the upstream branch |
 
 **messyagent**
 
@@ -162,6 +163,32 @@ Switch anyway? [y/N]:
 ```
 
 Switching to a **more expensive** model prompts for confirmation first. The session cost estimate prices each request at the model used for it, so it stays accurate even if you switch mid-session.
+
+## Development & testing
+
+Install the package with its dev dependencies (pytest), then run the suite:
+
+```bash
+pip install -e ".[dev]"
+pytest -q
+```
+
+The tests live in `tests/` and are pure unit tests — no network calls and no
+API key required (the Anthropic client is simulated). They cover:
+
+| File | What it covers |
+|------|----------------|
+| `tests/config_test.py` | API-key resolution order (env → file), key save/load, theme/model/todo persistence, malformed-config handling |
+| `tests/git_test.py` | The diff parser — noise-file filtering and the compact changed-lines format |
+| `tests/llm_test.py` | Insufficient-balance / billing-error detection and user messaging |
+| `tests/tool_schema_test.py` | Agent tool schemas match the shape the Anthropic Messages API expects |
+| `tests/agent_test.py` | The agent's tool-use loop, driven by a simulated Anthropic client with scripted responses |
+
+### Continuous integration
+
+`.github/workflows/test.yml` runs `pytest` on every push to `main` and on every
+pull request, across Python 3.10–3.13. No secrets are required because the tests
+mock the Anthropic client.
 
 ## Publishing to PyPI
 
