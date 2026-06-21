@@ -32,6 +32,7 @@ from .git import (
     get_current_branch,
     get_repo_status,
     get_staged_diff,
+    get_unpushed_commits,
     git_add,
     git_commit,
     git_push,
@@ -112,6 +113,7 @@ HELP_GROUPS = [
         ("add", "stage files", "add . or add <file> ..."),
         ("commit", "generate a commit message from staged changes", "commit"),
         ("push", "push commits to remote", "push"),
+        ("outbox", "show committed but unpushed commits", "outbox"),
     ]),
     ("messyagent", [
         ("suggest", "suggest next steps for your project", "suggest"),
@@ -413,6 +415,33 @@ def _handle_push() -> None:
     _success(output if output else "Pushed successfully.")
 
 
+def _handle_outbox() -> None:
+    if not is_git_repo():
+        _print_error("Not a git repository.")
+        return
+    box = get_unpushed_commits()
+    if box.upstream is None:
+        _print_error(
+            "No upstream branch set — push once with 'git push -u' to start tracking."
+        )
+        return
+    if not box.commits:
+        _success(f"Up to date with [{BRAND}]{box.upstream}[/] — nothing to push.")
+        return
+
+    n = len(box.commits)
+    body = Text()
+    body.append(
+        f"{n} commit{'s' if n != 1 else ''} ahead of {box.upstream}\n\n", style=MUTED
+    )
+    for commit in box.commits:
+        body.append(f"{commit.short_hash} ", style=BRAND)
+        body.append(f"{commit.subject}\n", style="default")
+    console.print(
+        Panel(body, title="outbox", border_style=BRAND, title_align="left")
+    )
+
+
 def _handle_commit() -> None:
     diff = get_staged_diff()
     if not diff.strip():
@@ -657,6 +686,7 @@ COMMANDS = {
     "add": _handle_add,
     "commit": lambda args: _handle_commit(),
     "push": lambda args: _handle_push(),
+    "outbox": lambda args: _handle_outbox(),
     "config": _handle_config,
     "show": lambda args: _handle_show(),
     "suggest": lambda args: _handle_suggestion(),

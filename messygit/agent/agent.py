@@ -53,8 +53,25 @@ class Agent:
 
                 tool_results = []
                 for block in tool_use_blocks:
-                    tool = next(t for t in self.tools if t.name == block.name)
-                    result = tool.run(**block.input)
+                    tool = next((t for t in self.tools if t.name == block.name), None)
+                    if tool is None:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": f"Unknown tool: {block.name!r}.",
+                            "is_error": True,
+                        })
+                        continue
+                    try:
+                        result = tool.run(**block.input)
+                    except Exception as e:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": f"Error running tool {block.name!r}: {e}",
+                            "is_error": True,
+                        })
+                        continue
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,

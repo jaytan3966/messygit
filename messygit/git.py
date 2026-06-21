@@ -314,3 +314,47 @@ def git_commit(message: str) -> CompletedProcess[str]:
         capture_output=True,
         text=True,
     )
+
+
+@dataclass
+class UnpushedCommit:
+    short_hash: str
+    subject: str
+
+
+@dataclass
+class Outbox:
+    """Commits made locally but not yet on the upstream branch."""
+
+    upstream: str | None
+    commits: list[UnpushedCommit]
+
+
+def get_unpushed_commits() -> Outbox:
+    """Return commits that are ahead of the current branch's upstream.
+
+    `upstream` is None when the branch has no configured upstream (e.g. it was
+    never pushed); in that case `commits` is empty and the caller should tell the
+    user to push/track the branch first.
+    """
+    upstream = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+        capture_output=True,
+        text=True,
+    )
+    if upstream.returncode != 0:
+        return Outbox(upstream=None, commits=[])
+    upstream_ref = upstream.stdout.strip()
+
+    log = subprocess.run(
+        ["git", "log", "--format=%h%x00%s", "@{upstream}..HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    commits: list[UnpushedCommit] = []
+    for line in log.stdout.splitlines():
+        if not line:
+            continue
+        short_hash, _, subject = line.partition("\x00")
+        commits.append(UnpushedCommit(short_hash=short_hash, subject=subject))
+    return Outbox(upstream=upstream_ref, commits=commits)
