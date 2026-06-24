@@ -118,6 +118,17 @@ def save_model(name: str) -> None:
     _write_config(config)
 
 
+def load_verbose() -> bool:
+    """Whether agent runs stream their steps live (default off)."""
+    return bool(_read_config().get("verbose", False))
+
+
+def save_verbose(enabled: bool) -> None:
+    config = _read_config()
+    config["verbose"] = bool(enabled)
+    _write_config(config)
+
+
 def load_todo() -> str:
     if not TODO_FILE.exists():
         return ""

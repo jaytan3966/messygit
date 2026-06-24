@@ -23,6 +23,7 @@ from .ui.banner import animate_banner
 from .ui.output import console, field, print_error
 from .ui.theme import DEFAULT_THEME, MUTED, SUCCESS, THEMES, WARNING
 from .commands.usage import model_pricing, usage_summary
+from .commands.trace import handle_trace
 from .commands import account_cmds, agent_cmds, app_cmds, git_cmds
 
 # Commands grouped for the help screen: (group, [(name, description, usage), ...]).
@@ -36,6 +37,7 @@ HELP_GROUPS = [
     ("messyagent", [
         ("suggest", "suggest next steps for your project", "suggest"),
         ("changelog", "generate a changelog for your project", "changelog"),
+        ("trace", "show what the last agent run actually did", "trace"),
     ]),
     ("account", [
         ("config", "set your Anthropic API key", "config <key>"),
@@ -46,6 +48,7 @@ HELP_GROUPS = [
     ("app", [
         ("todo", "open your todo list in your editor", "todo"),
         ("theme", "change the UI color", "theme or theme <name>"),
+        ("verbose", "stream agent steps live (on/off)", "verbose or verbose on|off"),
         ("help", "show this help message", "help"),
         ("quit/exit", "exit messygit", "quit"),
     ]),
@@ -139,10 +142,12 @@ COMMANDS = {
     "show": lambda args: account_cmds.handle_show(),
     "suggest": lambda args: agent_cmds.handle_suggestion(),
     "changelog": lambda args: agent_cmds.handle_changelog(),
+    "trace": lambda args: handle_trace(),
     "tokens": lambda args: account_cmds.handle_tokens(),
     "model": account_cmds.handle_model,
     "todo": lambda args: app_cmds.handle_todo(),
     "theme": app_cmds.handle_theme,
+    "verbose": app_cmds.handle_verbose,
     "help": lambda args: _print_help(),
 }
 

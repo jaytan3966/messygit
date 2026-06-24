@@ -3,10 +3,10 @@
 import click
 from rich.text import Text
 
-from ..config import load_todo, save_todo, save_theme
+from ..config import load_todo, save_todo, save_theme, load_verbose, save_verbose
 from ..ui import theme
 from ..ui.output import console, print_error, success, warn
-from ..ui.theme import MUTED, THEMES
+from ..ui.theme import MUTED, SUCCESS, THEMES
 
 TODO_SEED = "# messygit todo\n\n- \n"
 
@@ -46,6 +46,31 @@ def _print_theme_list() -> None:
         if current:
             line.append("  (current)", style=MUTED)
         console.print(line)
+
+
+def handle_verbose(args: list[str]) -> None:
+    """Toggle live step streaming for agent runs (`suggest`, `changelog`)."""
+    current = load_verbose()
+    if args:
+        choice = args[0].lower()
+        if choice in ("on", "true", "1", "yes"):
+            target = True
+        elif choice in ("off", "false", "0", "no"):
+            target = False
+        else:
+            print_error("Usage: verbose on|off  (or just 'verbose' to toggle)")
+            return
+    else:
+        target = not current  # bare `verbose` flips it
+
+    save_verbose(target)
+    state = f"[{SUCCESS}]on[/]" if target else f"[{MUTED}]off[/]"
+    detail = (
+        "agent runs will stream their steps live (no spinner)"
+        if target
+        else "agent runs show a spinner; use 'trace' to inspect afterward"
+    )
+    console.print(f"Verbose {state} [{MUTED}]— {detail}[/]")
 
 
 def handle_theme(args: list[str]) -> None:

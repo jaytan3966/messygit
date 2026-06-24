@@ -5,6 +5,7 @@ from rich.panel import Panel
 
 from ..agent.agent import Agent
 from ..agent.tools import (
+    edit_file_tool,
     list_directory_tool,
     read_file_tool,
     run_git_tool,
@@ -14,13 +15,25 @@ from ..config import (
     AnthropicInsufficientBalanceError,
     InvalidAnthropicCredentialsError,
     MissingApiKeyError,
+    load_verbose,
 )
 from ..prompts import SUGGESTION_SYSTEM_PROMPT, CHANGELOG_SYSTEM_PROMPT
 from ..usage import SESSION_USAGE
 from ..ui import theme
 from ..ui.output import console, print_error
 from ..ui.spinner import spinner
+from ..ui.theme import MUTED
+from .trace import record_trace, live_reporter
 from .usage import print_usage_delta
+
+
+def _drive(agent: Agent, prompt: str) -> str:
+    """Run the agent, streaming steps live when verbose, else under a spinner."""
+    if load_verbose():
+        console.print(f"[{MUTED}]› {agent.name} working…[/]")
+        return agent.run(prompt, on_step=live_reporter())
+    with spinner():
+        return agent.run(prompt)
 
 
 def handle_suggestion() -> None:
@@ -32,11 +45,11 @@ def handle_suggestion() -> None:
     )
     before = SESSION_USAGE.total
     try:
-        with spinner():
-            result = agent.run("What should the next steps for my project be? Let's limit it to 3-5 steps")
+        result = _drive(agent, "What should the next steps for my project be? Let's limit it to 3-5 steps")
     except (MissingApiKeyError, InvalidAnthropicCredentialsError, AnthropicInsufficientBalanceError) as e:
         print_error(str(e))
         return
+    record_trace("suggest", agent.steps)
     console.print(
         Panel(Markdown(result), title="suggested next steps", border_style=theme.BRAND, title_align="left")
     )
@@ -54,15 +67,15 @@ def handle_changelog() -> None:
         name="changelog_agent",
         system_prompt=CHANGELOG_SYSTEM_PROMPT,
         max_iterations=12,
-        tools=[run_git_tool, read_file_tool, list_directory_tool, write_file_tool],
+        tools=[run_git_tool, read_file_tool, list_directory_tool, write_file_tool, edit_file_tool],
     )
     before = SESSION_USAGE.total
     try:
-        with spinner():
-            result = agent.run("What are the latest changes to my project? Add to or create the CHANGELOG.md markdown file.")
+        result = _drive(agent, "What are the latest changes to my project? Add to or create the CHANGELOG.md markdown file.")
     except (MissingApiKeyError, InvalidAnthropicCredentialsError, AnthropicInsufficientBalanceError) as e:
         print_error(str(e))
         return
+    record_trace("changelog", agent.steps)
     console.print(
         Panel(Markdown(result), title="changelog", border_style=theme.BRAND, title_align="left")
     )
