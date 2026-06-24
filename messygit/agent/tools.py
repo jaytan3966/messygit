@@ -3,7 +3,7 @@ from .tool import Tool
 from ..git import get_staged_diff, get_staged_files
 import subprocess
 
-ALLOWED_GIT_COMMANDS = ["log", "diff", "status", "show", "status", "shortlog", "blame"]
+ALLOWED_GIT_COMMANDS = ["log", "diff", "status", "show", "status", "shortlog", "blame", "tag"]
 
 
 def _repo_root() -> str:
@@ -134,4 +134,43 @@ search_code_tool = Tool(
         },
     },
     required=["query"],
+)
+
+def write_file(path: str, content: str) -> str:
+    root = _repo_root()
+    target = os.path.realpath(os.path.join(root, path))
+    if target != root and not target.startswith(root + os.sep):
+        return f"Access denied: '{path}' is outside the repository root."
+    try:
+        with open(target, "w") as file:
+            file.write(content)
+        return "File written successfully."
+    except FileNotFoundError:
+        return "File not found."
+    except IsADirectoryError:
+        return "Path is a directory, not a file."
+    except PermissionError:
+        return "Permission denied."
+    except Exception as e:
+        return f"Error writing file: {e}"
+
+write_file_tool = Tool(
+    name="write_file",
+    description=(
+        "Write the given content to a file inside the repository. "
+        "Paths are resolved relative to the repository root; paths that escape the "
+        "repository (e.g. via '..' or absolute paths) are rejected."
+    ),
+    function=write_file,
+    parameters={
+        "path": {
+            "type": "string",
+            "description": "File path relative to the repository root, e.g. \"messygit/cli.py\".",
+        },
+        "content": {
+            "type": "string",
+            "description": "The content to write to the file.",
+        },
+    },
+    required=["path", "content"],
 )

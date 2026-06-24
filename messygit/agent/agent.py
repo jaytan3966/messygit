@@ -35,6 +35,7 @@ class Agent:
         try:
             messages.append({"role": "user", "content": user_input})
             response = None
+            completed = False
             for i in range(self.max_iterations):
                 response = client.messages.create(
                     model=model.id,
@@ -49,6 +50,7 @@ class Agent:
 
                 tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
                 if not tool_use_blocks:
+                    completed = True
                     break
 
                 tool_results = []
@@ -96,4 +98,13 @@ class Agent:
             raise
         if not response:
             return "No response from the agent."
-        return _text_from_message(response)
+        text = _text_from_message(response)
+        if not completed:
+            warning = (
+                f"⚠️ Stopped after reaching the {self.max_iterations}-iteration "
+                "limit before finishing. The task is incomplete — any file the "
+                "agent was meant to write may be missing or partial. Try again, "
+                "and consider raising the iteration limit if this recurs."
+            )
+            return f"{warning}\n\n{text}" if text else warning
+        return text

@@ -39,10 +39,10 @@ from .git import (
     is_git_repo,
 )
 from .llm import generate_commit_message
-from .prompts import SUGGESTION_SYSTEM_PROMPT
+from .prompts import SUGGESTION_SYSTEM_PROMPT, CHANGELOG_SYSTEM_PROMPT
 from .models import MODELS, current_model, resolve_model_key
 from .usage import SESSION_USAGE, BILLING_URL
-from .agent.tools import run_git_tool, read_file_tool, list_directory_tool
+from .agent.tools import run_git_tool, read_file_tool, list_directory_tool, write_file_tool
 from .agent.agent import Agent
 
 # Once a session crosses this many tokens, surface a one-time heads-up with the
@@ -117,6 +117,7 @@ HELP_GROUPS = [
     ]),
     ("messyagent", [
         ("suggest", "suggest next steps for your project", "suggest"),
+        ("changelog", "generate a changelog for your project", "changelog"),
     ]),
     ("account", [
         ("config", "set your Anthropic API key", "config <key>"),
@@ -681,6 +682,31 @@ def _handle_suggestion() -> None:
     )
     _print_usage_delta(before)
 
+def _handle_changelog() -> None:
+    if not run_git_tool.function(["tag"]).strip():
+        _print_error(
+            "No tags found. Create a tag to mark a release "
+            "(e.g. `git tag v0.1.0`) before running changelog."
+        )
+        return
+    agent = Agent(
+        name="changelog_agent",
+        system_prompt=CHANGELOG_SYSTEM_PROMPT,
+        max_iterations=12,
+        tools=[run_git_tool, read_file_tool, list_directory_tool, write_file_tool],
+    )
+    before = SESSION_USAGE.total
+    try:
+        with _spinner():
+            result = agent.run("What are the latest changes to my project? Add to or create the CHANGELOG.md markdown file.")
+    except (MissingApiKeyError, InvalidAnthropicCredentialsError, AnthropicInsufficientBalanceError) as e:
+        _print_error(str(e))
+        return
+    console.print(
+        Panel(Markdown(result), title="changelog", border_style=BRAND, title_align="left")
+    )
+    _print_usage_delta(before)
+
 
 COMMANDS = {
     "add": _handle_add,
@@ -690,6 +716,7 @@ COMMANDS = {
     "config": _handle_config,
     "show": lambda args: _handle_show(),
     "suggest": lambda args: _handle_suggestion(),
+    "changelog": lambda args: _handle_changelog(),
     "tokens": lambda args: _handle_tokens(),
     "model": _handle_model,
     "todo": lambda args: _handle_todo(),
