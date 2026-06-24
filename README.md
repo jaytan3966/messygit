@@ -1,15 +1,17 @@
 # messygit
 
-**messygit** is an interactive CLI that turns messy git workflows into clean Conventional Commits — stage, commit, push, and get AI-powered project suggestions, all from one interface powered by [Claude](https://www.anthropic.com/api).
+**messygit** is an interactive CLI that turns messy git workflows into clean Conventional Commits — stage, commit, push, generate changelogs, and get AI-powered project suggestions, all from one interface powered by [Claude](https://www.anthropic.com/api).
 
 ## Why use it
 
 - **Interactive REPL** — one command drops you into a persistent session where you can stage, commit, push, and more without leaving.
 - **AI commit messages** — sends your staged diff to Claude and suggests a clean Conventional Commits subject line.
 - **Project suggestions** — an AI agent inspects your repo and recommends concrete next steps.
+- **Changelog generation** — an agent reads the commits between your two latest tags, drills into unclear ones, categorizes the changes, and writes/updates `CHANGELOG.md`.
+- **See what the agent did** — runs are clean by default; type `trace` to expand the last run's tool calls, or flip `verbose` on to stream each step live.
 - **Token usage & cost** — tracks the tokens each session uses and shows a rough cost estimate, with a one-command jump to billing.
 - **Themed UI** — a colored startup animation and prompt you can recolor with the `theme` command.
-- **Safe by default** — only the staged diff is sent to the model. Your API key is never printed in full.
+- **Safe by default** — only the staged diff is sent for `commit`; agents use read-only git plus repo-scoped file tools that reject paths outside the repository. Your API key is never printed in full.
 
 ## Requirements
 
@@ -90,6 +92,8 @@ Commands are grouped on the `help` screen:
 | Command | Description |
 |---------|-------------|
 | `suggest` | Get AI-powered next-step suggestions for your project |
+| `changelog` | Generate or update `CHANGELOG.md` from the commits between your two latest tags (requires at least one tag) |
+| `trace` | Show what the last agent run actually did — its tool calls and results |
 
 **account**
 
@@ -106,6 +110,7 @@ Commands are grouped on the `help` screen:
 |---------|-------------|
 | `todo` | Open your todo list in `$EDITOR` (saved to `~/.messygit/todo.md`) |
 | `theme` or `theme <name>` | Change the UI color (run `theme` to list presets) |
+| `verbose` or `verbose on\|off` | Toggle live streaming of agent steps (persists; off by default) |
 | `help` | List available commands |
 | `quit` / `exit` | Exit messygit |
 
@@ -124,6 +129,41 @@ messygit > push
 
 > Tip: run `suggest` for AI next-step ideas, or `theme` to recolor the UI.
 
+### Agent commands & transparency
+
+`suggest` and `changelog` are backed by an agent that uses tools (read-only git,
+file reads, and — for `changelog` — repo-scoped file writes) over several steps.
+
+By default a run shows only a spinner and the final result. Two commands let you
+see inside:
+
+```
+messygit > changelog          # generates/updates CHANGELOG.md
+messygit > trace              # expand what that run just did
+
+╭─ trace · changelog · 4 tool calls ─────────────╮
+│ 1. run_git  tag --sort=-creatordate            │
+│    └ v0.4.0  (+3 more lines)                    │
+│ 2. run_git  log v0.3.2..v0.4.0                  │
+│    └ commit a1b2c3 feat: …  (+12 more lines)    │
+│ 3. read_file  CHANGELOG.md                      │
+│    └ ## [v0.3.2] - 2026-06-20                    │
+│ 4. edit_file  CHANGELOG.md                      │
+│    └ File edited successfully.                   │
+╰─────────────────────────────────────────────────╯
+```
+
+Prefer to watch it happen live? Turn on `verbose` — the same steps stream as the
+agent works (no spinner). The setting persists in `~/.messygit/config.json`:
+
+```
+messygit > verbose on
+Verbose on — agent runs will stream their steps live (no spinner)
+```
+
+`changelog` requires at least one git tag; it documents the range between your two
+most recent tags (or the latest tag to `HEAD` when only one exists).
+
 ### Commit message style
 
 The model follows **Conventional Commits**: `type(scope): description`
@@ -132,7 +172,7 @@ Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`. Subj
 
 ### Token usage & cost
 
-messygit tracks the tokens used by AI commands (`commit`, `suggest`) for the current session and shows a running total after each call. Run `tokens` for a breakdown and a one-key jump to the Anthropic billing console:
+messygit tracks the tokens used by AI commands (`commit`, `suggest`, `changelog`) for the current session and shows a running total after each call. Run `tokens` for a breakdown and a one-key jump to the Anthropic billing console:
 
 ```
 messygit > tokens
@@ -183,6 +223,8 @@ API key required (the Anthropic client is simulated). They cover:
 | `tests/llm_test.py` | Insufficient-balance / billing-error detection and user messaging |
 | `tests/tool_schema_test.py` | Agent tool schemas match the shape the Anthropic Messages API expects |
 | `tests/agent_test.py` | The agent's tool-use loop, driven by a simulated Anthropic client with scripted responses |
+| `tests/trace_test.py` | The `trace` renderer — step numbering, result truncation, empty state, and markup-safety of raw tool output |
+| `tests/verbose_test.py` | The `verbose` setting, the toggle command, and `_drive` choosing live-stream vs. spinner |
 
 ### Continuous integration
 
