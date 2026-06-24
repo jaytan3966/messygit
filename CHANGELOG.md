@@ -1,3 +1,14 @@
+## [v0.4.0] - 2026-06-23
+### Added
+- `trace` command to inspect and display the detailed steps of the last agent run (show what tools were called, their inputs, and results)
+- `verbose` mode toggle to stream agent steps live as they execute (replaces the spinner with real-time output during `suggest` and `changelog` operations)
+- `edit_file` tool for the agent to make precise edits to existing files by replacing specific text spans (complements `write_file` for partial updates)
+- `changelog` command to automatically generate and update a CHANGELOG.md file by analyzing git history between tags
+- Iteration limit warning that displays when an agent run hits the maximum iteration limit before completing, alerting users that the task may be incomplete
+
+### Changed
+- CLI code reorganized from a single monolithic module into separate command modules (account_cmds, git_cmds, agent_cmds, app_cmds) and UI modules (banner, spinner, theme, output) for better maintainability
+
 ## [v0.3.2] - 2026-06-20
 ### Added
 - Error handling for unknown tools—agent now returns an error result instead of crashing when the model requests a non-existent tool
