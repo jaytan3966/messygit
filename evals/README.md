@@ -9,8 +9,14 @@ API, so they cost tokens and need an `ANTHROPIC_API_KEY`. They are intentionally
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...     # or: messygit > config <key>
-python -m evals.commit_eval
+python -m evals.commit_eval        # diff -> commit subject
+python -m evals.suggest_eval       # repo state -> next-steps list (agentic)
+python -m evals.changelog_eval     # tagged repo -> written CHANGELOG.md (agentic)
 ```
+
+The agentic evals (`suggest`, `changelog`) build a throwaway git repo per case,
+run the real agent inside it, and grade both the output and the trace — so they
+call the API many times over several iterations and take a few minutes each.
 
 Each run writes a markdown report to `evals/results/<eval>/<timestamp>.md`
 (one file per run, grouped by eval) — the terminal only prints the file path.

@@ -36,7 +36,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 # Judge model. Defaults to Haiku (cheap); override with EVAL_JUDGE_MODEL — a
 # stronger judge (e.g. claude-sonnet-4-6) gives more reliable semantic grading.
-DEFAULT_JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "claude-haiku-4-5")
+DEFAULT_JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "claude-sonnet-4-6")
 # Default bar: fraction of applicable checks that must pass for the suite to pass.
 PASS_BAR = float(os.environ.get("EVAL_PASS_BAR", "0.9"))
 
